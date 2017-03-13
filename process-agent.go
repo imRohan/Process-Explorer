@@ -11,6 +11,7 @@ import (
 	"os/user"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Process struct {
@@ -94,12 +95,27 @@ func getMacAddress() string {
 func main() {
 
 	var processWindow, searchField *walk.TextEdit
-	var toggleDefaultsCheckBox *walk.CheckBox
+	var autoRefreshCheckbox, toggleDefaultsCheckbox *walk.CheckBox
 	showDefaultProcesses := false
 	var searchFieldString string
 	currentUser := getCurrentUser()
 	macAddress := getMacAddress()
 	windowTitle := fmt.Sprintf("%s - %s", currentUser, macAddress)
+
+	autoRefresh := false
+
+	go func(){
+    for range time.Tick(time.Second * 10) {
+      status := autoRefresh
+      if status {
+        fmt.Println("Refresh Processes")
+        processWindow.SetText("")
+        searchFieldString = searchField.Text()
+        returnedProcesses := getProcesses(showDefaultProcesses, searchFieldString)
+        outputToProcessWindow(processWindow, returnedProcesses)
+      }
+    }
+  }()
 
 	MainWindow{
 		Title:   windowTitle,
@@ -109,7 +125,18 @@ func main() {
 			HSplitter{
 				Children: []Widget{
 					CheckBox{
-						AssignTo: &toggleDefaultsCheckBox,
+						AssignTo: &autoRefreshCheckbox,
+						Text:     "Auto Refresh",
+						Checked:  false,
+						OnCheckStateChanged: func() {
+              autoRefresh = !autoRefresh
+							checkboxValue := strconv.FormatBool(autoRefresh)
+							checkboxOutput := fmt.Sprintf("Auto Refresh: %s \n", checkboxValue)
+							processWindow.AppendText(checkboxOutput)
+						},
+					},
+					CheckBox{
+						AssignTo: &toggleDefaultsCheckbox,
 						Text:     "Hide Defaults",
 						Checked:  false,
 						OnCheckStateChanged: func() {
@@ -145,7 +172,7 @@ func main() {
 						Text: "Get All Processes",
 						OnClicked: func() {
 							returnedProcesses := getProcesses(showDefaultProcesses, "")
-              go outputToProcessWindow(processWindow, returnedProcesses)
+							go outputToProcessWindow(processWindow, returnedProcesses)
 							go renderJSON(returnedProcesses)
 						},
 					},
