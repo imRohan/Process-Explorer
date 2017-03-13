@@ -7,7 +7,6 @@ import (
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
 	"github.com/satori/go.uuid"
-	"log"
 	"net"
 	"os/user"
 	"strconv"
@@ -24,9 +23,8 @@ type Process struct {
 
 func getProcesses(defaultProcesses bool, searchString string) []Process {
 	processes, err := ps.Processes()
-
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Cannot get processes ", err)
 	}
 
 	var output []Process
@@ -74,7 +72,7 @@ func getCurrentUser() string {
 	user, err := user.Current()
 
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Cannot get current user", err)
 	}
 
 	username := fmt.Sprintf("%s", user.Username)
@@ -105,7 +103,7 @@ func main() {
 
 	MainWindow{
 		Title:   windowTitle,
-		MinSize: Size{300, 600},
+		MinSize: Size{500, 500},
 		Layout:  VBox{},
 		Children: []Widget{
 			HSplitter{
@@ -144,7 +142,7 @@ func main() {
 			HSplitter{
 				Children: []Widget{
 					PushButton{
-						Text: "Get Processes",
+						Text: "Get All Processes",
 						OnClicked: func() {
 							processWindow.SetText("")
 							returnedProcesses := getProcesses(showDefaultProcesses, "")
