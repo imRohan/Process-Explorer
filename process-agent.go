@@ -81,7 +81,7 @@ func getCurrentUser() string {
 
 func getMacAddress() string {
 	interfaces, _ := net.Interfaces()
-	macAddress := ""
+	var macAddress string
 	for _, singleInterface := range interfaces {
 		hardwareName := singleInterface.Name
 		if hardwareName == "Ethernet" || hardwareName == "ethernet" {
@@ -96,7 +96,7 @@ func main() {
 	var processWindow, searchField *walk.TextEdit
 	var toggleDefaultsCheckBox *walk.CheckBox
 	showDefaultProcesses := false
-	searchFieldString := ""
+	var searchFieldString string
 	currentUser := getCurrentUser()
 	macAddress := getMacAddress()
 	windowTitle := fmt.Sprintf("%s - %s", currentUser, macAddress)
@@ -144,10 +144,9 @@ func main() {
 					PushButton{
 						Text: "Get All Processes",
 						OnClicked: func() {
-							processWindow.SetText("")
 							returnedProcesses := getProcesses(showDefaultProcesses, "")
-							outputToProcessWindow(processWindow, returnedProcesses)
-							renderJSON(returnedProcesses)
+              go outputToProcessWindow(processWindow, returnedProcesses)
+							go renderJSON(returnedProcesses)
 						},
 					},
 				},
