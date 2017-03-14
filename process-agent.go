@@ -22,7 +22,16 @@ type Process struct {
 	Uuid      uuid.UUID
 }
 
-func getProcesses(defaultProcesses bool, searchString string) []Process {
+var autoRefresh bool = false
+var processWindow, searchField *walk.TextEdit
+var autoRefreshCheckbox, toggleDefaultsCheckbox *walk.CheckBox
+var searchFieldString string
+var showDefaultProcesses bool = false
+
+func getProcesses() []Process {
+	defaultProcesses := showDefaultProcesses
+	searchString := searchFieldString
+
 	processes, err := ps.Processes()
 	if err != nil {
 		fmt.Println("Cannot get processes ", err)
@@ -48,7 +57,18 @@ func getProcesses(defaultProcesses bool, searchString string) []Process {
 }
 
 func renderJSON(returnedProcesses []Process) {
-	json, err := json.Marshal(returnedProcesses)
+	currentUser := getCurrentUser()
+	macAddress := getMacAddress()
+
+	type outputStruct struct {
+		Username   string
+		MacAddress string
+		Processes  []Process
+	}
+
+	outputPackage := outputStruct{currentUser, macAddress, returnedProcesses}
+
+	json, err := json.Marshal(outputPackage)
 	if err != nil {
 		fmt.Println("Cannot create JSON ", err)
 	}
@@ -56,7 +76,11 @@ func renderJSON(returnedProcesses []Process) {
 	fmt.Println(string(json))
 }
 
-func outputToProcessWindow(processWindow *walk.TextEdit, returnedProcesses []Process) {
+func outputToProcessWindow(returnedProcesses []Process) {
+	go renderJSON(returnedProcesses)
+
+	processWindow.SetText("")
+
 	for _, singleProcess := range returnedProcesses {
 		createdAt := singleProcess.CreatedAt
 		name := singleProcess.Name
@@ -92,33 +116,24 @@ func getMacAddress() string {
 	return macAddress
 }
 
+func initAutoRefresh() {
+	for range time.Tick(time.Second * 10) {
+		status := autoRefresh
+		if status {
+			fmt.Println("Refresh Processes")
+			processWindow.SetText("")
+			searchFieldString = searchField.Text()
+			returnedProcesses := getProcesses()
+			outputToProcessWindow(returnedProcesses)
+		}
+	}
+}
+
 func main() {
-
-	var processWindow, searchField *walk.TextEdit
-	var autoRefreshCheckbox, toggleDefaultsCheckbox *walk.CheckBox
-	showDefaultProcesses := false
-	var searchFieldString string
-	currentUser := getCurrentUser()
-	macAddress := getMacAddress()
-	windowTitle := fmt.Sprintf("%s - %s", currentUser, macAddress)
-
-	autoRefresh := false
-
-	go func(){
-    for range time.Tick(time.Second * 10) {
-      status := autoRefresh
-      if status {
-        fmt.Println("Refresh Processes")
-        processWindow.SetText("")
-        searchFieldString = searchField.Text()
-        returnedProcesses := getProcesses(showDefaultProcesses, searchFieldString)
-        outputToProcessWindow(processWindow, returnedProcesses)
-      }
-    }
-  }()
+	go initAutoRefresh()
 
 	MainWindow{
-		Title:   windowTitle,
+		Title:   "Process Agent",
 		MinSize: Size{500, 500},
 		Layout:  VBox{},
 		Children: []Widget{
@@ -129,7 +144,7 @@ func main() {
 						Text:     "Auto Refresh",
 						Checked:  false,
 						OnCheckStateChanged: func() {
-              autoRefresh = !autoRefresh
+							autoRefresh = !autoRefresh
 							checkboxValue := strconv.FormatBool(autoRefresh)
 							checkboxOutput := fmt.Sprintf("Auto Refresh: %s \n", checkboxValue)
 							processWindow.AppendText(checkboxOutput)
@@ -152,10 +167,9 @@ func main() {
 					PushButton{
 						Text: "Filter",
 						OnClicked: func() {
-							processWindow.SetText("")
 							searchFieldString = searchField.Text()
-							returnedProcesses := getProcesses(showDefaultProcesses, searchFieldString)
-							outputToProcessWindow(processWindow, returnedProcesses)
+							returnedProcesses := getProcesses()
+							outputToProcessWindow(returnedProcesses)
 						},
 					},
 				},
@@ -171,14 +185,13 @@ func main() {
 					PushButton{
 						Text: "Get All Processes",
 						OnClicked: func() {
-							returnedProcesses := getProcesses(showDefaultProcesses, "")
-							go outputToProcessWindow(processWindow, returnedProcesses)
-							go renderJSON(returnedProcesses)
+							searchFieldString = ""
+							returnedProcesses := getProcesses()
+							outputToProcessWindow(returnedProcesses)
 						},
 					},
 				},
 			},
 		},
 	}.Run()
-
 }
