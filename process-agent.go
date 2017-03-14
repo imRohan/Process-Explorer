@@ -16,11 +16,11 @@ import (
 )
 
 type Process struct {
-  Name      string    `json:"name"`
-  CreatedAt string    `json:"createdAt"`
-  Pid       int       `json:"pid"`
-  Ppid      int       `json:"ppid"`
-  Uuid      uuid.UUID `json:"uuid"`
+	Name      string    `json:"name"`
+	CreatedAt string    `json:"createdAt"`
+	Pid       int       `json:"pid"`
+	Ppid      int       `json:"ppid"`
+	Uuid      uuid.UUID `json:"uuid"`
 }
 
 var autoRefresh bool = false
@@ -58,17 +58,17 @@ func getProcesses() (output []Process, err error) {
 func renderJSON(returnedProcesses []Process) error {
 	currentUser, err := getCurrentUser()
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 	macAddress, err := getMacAddress()
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 
 	type outputStruct struct {
-    Username   string     `json:"username"`
-    MacAddress string     `json:"macAddress"`
-    Processes  []Process  `json:"processes"`
+		Username   string    `json:"username"`
+		MacAddress string    `json:"macAddress"`
+		Processes  []Process `json:"processes"`
 	}
 
 	outputPackage := outputStruct{currentUser, macAddress, returnedProcesses}
