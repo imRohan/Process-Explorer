@@ -16,11 +16,11 @@ import (
 )
 
 type Process struct {
-	Name      string
-	CreatedAt string
-	Pid       int
-	Ppid      int
-	Uuid      uuid.UUID
+  Name      string    `json:"name"`
+  CreatedAt string    `json:"createdAt"`
+  Pid       int       `json:"pid"`
+  Ppid      int       `json:"ppid"`
+  Uuid      uuid.UUID `json:"uuid"`
 }
 
 var autoRefresh bool = false
