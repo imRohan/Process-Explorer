@@ -66,9 +66,9 @@ func renderJSON(returnedProcesses []Process) error {
 	}
 
 	type outputStruct struct {
-		Username   string
-		MacAddress string
-		Processes  []Process
+    Username   string     `json:"username"`
+    MacAddress string     `json:"macAddress"`
+    Processes  []Process  `json:"processes"`
 	}
 
 	outputPackage := outputStruct{currentUser, macAddress, returnedProcesses}
