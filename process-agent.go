@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/imRohan/go-ps"
 	"github.com/lxn/walk"
@@ -28,16 +29,14 @@ var autoRefreshCheckbox, toggleDefaultsCheckbox *walk.CheckBox
 var searchFieldString string
 var showDefaultProcesses bool = false
 
-func getProcesses() []Process {
+func getProcesses() (output []Process, err error) {
 	defaultProcesses := showDefaultProcesses
 	searchString := searchFieldString
 
 	processes, err := ps.Processes()
 	if err != nil {
-		fmt.Println("Cannot get processes ", err)
+		return output, errors.New("Could Not Get Processes")
 	}
-
-	var output []Process
 
 	for _, process := range processes {
 		createdAt := process.CreationTime()
@@ -53,12 +52,18 @@ func getProcesses() []Process {
 		}
 	}
 
-	return output
+	return output, nil
 }
 
-func renderJSON(returnedProcesses []Process) {
-	currentUser := getCurrentUser()
-	macAddress := getMacAddress()
+func renderJSON(returnedProcesses []Process) error {
+	currentUser, err := getCurrentUser()
+	if err != nil {
+		fmt.Println(err)
+	}
+	macAddress, err := getMacAddress()
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	type outputStruct struct {
 		Username   string
@@ -70,10 +75,11 @@ func renderJSON(returnedProcesses []Process) {
 
 	json, err := json.Marshal(outputPackage)
 	if err != nil {
-		fmt.Println("Cannot create JSON ", err)
+		return errors.New("Cannot Generate JSON")
 	}
 
 	fmt.Println(string(json))
+	return nil
 }
 
 func outputToProcessWindow(returnedProcesses []Process) {
@@ -93,27 +99,31 @@ func outputToProcessWindow(returnedProcesses []Process) {
 	}
 }
 
-func getCurrentUser() string {
+func getCurrentUser() (username string, err error) {
 	user, err := user.Current()
 
 	if err != nil {
-		fmt.Println("Cannot get current user", err)
+		return username, errors.New("Cannot Get User Details")
 	}
 
-	username := fmt.Sprintf("%s", user.Username)
-	return username
+	username = fmt.Sprintf("%s", user.Username)
+	return username, nil
 }
 
-func getMacAddress() string {
-	interfaces, _ := net.Interfaces()
-	var macAddress string
+func getMacAddress() (macAddress string, err error) {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return macAddress, errors.New("Cannot Get Interfaces")
+	}
+
 	for _, singleInterface := range interfaces {
 		hardwareName := singleInterface.Name
 		if hardwareName == "Ethernet" || hardwareName == "ethernet" {
 			macAddress = singleInterface.HardwareAddr.String()
 		}
 	}
-	return macAddress
+
+	return macAddress, nil
 }
 
 func initAutoRefresh() {
@@ -123,8 +133,12 @@ func initAutoRefresh() {
 			fmt.Println("Refresh Processes")
 			processWindow.SetText("")
 			searchFieldString = searchField.Text()
-			returnedProcesses := getProcesses()
-			outputToProcessWindow(returnedProcesses)
+			returnedProcesses, err := getProcesses()
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				outputToProcessWindow(returnedProcesses)
+			}
 		}
 	}
 }
@@ -168,8 +182,12 @@ func main() {
 						Text: "Filter",
 						OnClicked: func() {
 							searchFieldString = searchField.Text()
-							returnedProcesses := getProcesses()
-							outputToProcessWindow(returnedProcesses)
+							returnedProcesses, err := getProcesses()
+							if err != nil {
+								fmt.Println(err)
+							} else {
+								outputToProcessWindow(returnedProcesses)
+							}
 						},
 					},
 				},
@@ -186,8 +204,12 @@ func main() {
 						Text: "Get All Processes",
 						OnClicked: func() {
 							searchFieldString = ""
-							returnedProcesses := getProcesses()
-							outputToProcessWindow(returnedProcesses)
+							returnedProcesses, err := getProcesses()
+							if err != nil {
+								fmt.Println(err)
+							} else {
+								outputToProcessWindow(returnedProcesses)
+							}
 						},
 					},
 				},
