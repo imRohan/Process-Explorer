@@ -5,18 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"github.com/imRohan/go-ps"
+	"github.com/kardianos/service"
 	"github.com/satori/go.uuid"
-  "github.com/kardianos/service"
 	"net"
-  //"os"
+	"os"
 	"os/user"
 	"strings"
 	"time"
 )
 
-var autoRefresh bool = false
+var autoRefresh bool = true
 var showDefaultProcesses bool = false
 var logger service.Logger
+
+type program struct{}
 
 type Process struct {
 	Name      string    `json:"name"`
@@ -27,11 +29,10 @@ type Process struct {
 }
 
 type outputStruct struct {
-  Username   string    `json:"username"`
-  MacAddress string    `json:"macAddress"`
-  Processes  []Process `json:"processes"`
+	Username   string    `json:"username"`
+	MacAddress string    `json:"macAddress"`
+	Processes  []Process `json:"processes"`
 }
-
 
 func getProcesses() (output []Process, err error) {
 	defaultProcesses := showDefaultProcesses
@@ -48,8 +49,8 @@ func getProcesses() (output []Process, err error) {
 		ppid := process.PPid()
 		uuid := uuid.NewV1()
 		if !defaultProcesses || defaultProcesses && createdAt.Year() != -0001 {
-      currentProcess := Process{name, createdAt.String(), pid, ppid, uuid}
-      output = append(output, currentProcess)
+			currentProcess := Process{name, createdAt.String(), pid, ppid, uuid}
+			output = append(output, currentProcess)
 		}
 	}
 
@@ -65,7 +66,6 @@ func renderJSON(returnedProcesses []Process) error {
 	if err != nil {
 		return err
 	}
-
 
 	outputPackage := outputStruct{currentUser, macAddress, returnedProcesses}
 
@@ -114,11 +114,46 @@ func initAutoRefresh() {
 			if err != nil {
 				fmt.Println(err)
 			} else {
-        renderJSON(returnedProcesses)
+				renderJSON(returnedProcesses)
 			}
 		}
 	}
 }
 
+func (p *program) Start(s service.Service) error {
+	go p.run()
+	return nil
+}
+
+func (p *program) run() {
+	initAutoRefresh()
+}
+
+func (p *program) Stop(s service.Service) error {
+	return nil
+}
+
 func main() {
+	svcConfig := &service.Config{
+		Name:        "BioConnectProcessAgent",
+		DisplayName: "BioConnect Process Agent",
+		Description: "Collets data on the processes running",
+	}
+
+	prg := &program{}
+	s, err := service.New(prg, svcConfig)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if len(os.Args) > 1 {
+		err = service.Control(s, os.Args[1])
+		if err != nil {
+			fmt.Println(err)
+		}
+		return
+	}
+	err = s.Run()
+	if err != nil {
+		fmt.Println(err)
+	}
 }
