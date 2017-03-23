@@ -7,6 +7,7 @@ import (
 	"github.com/imRohan/go-ps"
 	"github.com/kardianos/service"
 	"github.com/satori/go.uuid"
+	"log"
 	"net"
 	"os"
 	"os/user"
@@ -74,7 +75,7 @@ func renderJSON(returnedProcesses []Process) error {
 		return errors.New("Cannot Generate JSON")
 	}
 
-	fmt.Println(string(json))
+	log.Println(string(json))
 	return nil
 }
 
@@ -109,10 +110,10 @@ func initAutoRefresh() {
 	for range time.Tick(time.Second * 10) {
 		status := autoRefresh
 		if status {
-			fmt.Println("Refresh Processes")
+			log.Println("Refresh Processes")
 			returnedProcesses, err := getProcesses()
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 			} else {
 				renderJSON(returnedProcesses)
 			}
@@ -134,6 +135,14 @@ func (p *program) Stop(s service.Service) error {
 }
 
 func main() {
+	logFile, err := os.OpenFile("activityLog", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer logFile.Close()
+
+	log.SetOutput(logFile)
+
 	svcConfig := &service.Config{
 		Name:        "BioConnectProcessAgent",
 		DisplayName: "BioConnect Process Agent",
@@ -143,17 +152,19 @@ func main() {
 	prg := &program{}
 	s, err := service.New(prg, svcConfig)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
+
 	if len(os.Args) > 1 {
 		err = service.Control(s, os.Args[1])
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		return
 	}
+
 	err = s.Run()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 }
