@@ -58,7 +58,7 @@ func getProcesses() (output []Process, err error) {
 		pid := process.Pid()
 		ppid := process.PPid()
 		uuid := uuid.NewV1()
-		if !defaultProcesses || defaultProcesses && createdAt.Year() != -0001 {
+		if !defaultProcesses || defaultProcesses && createdAt.Year() > 1 {
 			currentProcess := Process{name, createdAt.String(), pid, ppid, uuid}
 			output = append(output, currentProcess)
 		}
@@ -109,11 +109,11 @@ func getMacAddress() (macAddress string, err error) {
 func initAutoRefresh() {
 	for range time.Tick(time.Second * options.refreshTime) {
 		if options.autoRefresh {
-			log.Println("Refresh Processes \r\n")
 			returnedProcesses, err := getProcesses()
 			if err != nil {
 				log.Println(err)
 			} else {
+        log.Println("Found: ", len(returnedProcesses), "processes running \r\n")
 				renderJSON(returnedProcesses)
 			}
 		}
