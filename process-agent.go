@@ -106,20 +106,6 @@ func getMacAddress() (macAddress string, err error) {
 	return macAddress, nil
 }
 
-func initAutoRefresh() {
-	for range time.Tick(time.Second * options.refreshTime) {
-		if options.autoRefresh {
-			returnedProcesses, err := getProcesses()
-			if err != nil {
-				log.Println(err)
-			} else {
-				log.Println("Found:", len(returnedProcesses), "running processes \r\n")
-				renderJSON(returnedProcesses)
-			}
-		}
-	}
-}
-
 func (p *program) Start(s service.Service) error {
 	go p.run()
 	return nil
@@ -143,7 +129,18 @@ func (p *program) run() {
 		"Options: [Auto Refresh: %v(%v seconds), Show Defaults: %v \r\n",
 		userDetails.name, options.autoRefresh, options.refreshTime, options.hideDefaultProcesses)
 	log.Println(logString)
-	initAutoRefresh()
+
+	for range time.Tick(time.Second * options.refreshTime) {
+		if options.autoRefresh {
+			returnedProcesses, err := getProcesses()
+			if err != nil {
+				log.Println(err)
+			} else {
+				log.Println("Found:", len(returnedProcesses), "running processes \r\n")
+				renderJSON(returnedProcesses)
+			}
+		}
+	}
 }
 
 func (p *program) Stop(s service.Service) error {
