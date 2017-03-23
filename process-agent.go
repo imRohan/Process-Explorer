@@ -18,7 +18,13 @@ import (
 var autoRefresh bool = true
 var showDefaultProcesses bool = false
 var logger service.Logger
+
 const refreshTime = 10
+
+var userDetails struct {
+	name string
+	mac  string
+}
 
 type program struct{}
 
@@ -31,8 +37,8 @@ type Process struct {
 }
 
 type outputStruct struct {
-	Username   string    `json:"username"`
-	MacAddress string    `json:"macAddress"`
+	User       string    `json:"user"`
+	MacAddress string    `json:"Mac Address"`
 	Processes  []Process `json:"processes"`
 }
 
@@ -60,16 +66,7 @@ func getProcesses() (output []Process, err error) {
 }
 
 func renderJSON(returnedProcesses []Process) error {
-	currentUser, err := getCurrentUser()
-	if err != nil {
-		return err
-	}
-	macAddress, err := getMacAddress()
-	if err != nil {
-		return err
-	}
-
-	outputPackage := outputStruct{currentUser, macAddress, returnedProcesses}
+	outputPackage := outputStruct{userDetails.name, userDetails.mac, returnedProcesses}
 
 	json, err := json.Marshal(outputPackage)
 	if err != nil {
@@ -128,7 +125,20 @@ func (p *program) Start(s service.Service) error {
 }
 
 func (p *program) run() {
-  log.Println("Started Service \r\n")
+  name, err := getCurrentUser()
+	if err != nil {
+		log.Println(err)
+	}
+
+  mac, err := getMacAddress()
+	if err != nil {
+		log.Println(err)
+	}
+
+  userDetails.name = name
+  userDetails.mac = mac
+
+  log.Println("Started Service for user - ", userDetails.name, "\r\n")
 	initAutoRefresh()
 }
 
@@ -152,20 +162,20 @@ func main() {
 	}
 
 	prg := &program{}
-	s, err := service.New(prg, svcConfig)
+	processService, err := service.New(prg, svcConfig)
 	if err != nil {
 		log.Println(err.Error() + "\r\n")
 	}
 
 	if len(os.Args) > 1 {
-		err = service.Control(s, os.Args[1])
+		err = service.Control(processService, os.Args[1])
 		if err != nil {
 			log.Println(err.Error() + "\r\n")
 		}
 		return
 	}
 
-	err = s.Run()
+	err = processService.Run()
 	if err != nil {
 		log.Println(err.Error() + "\r\n")
 	}
