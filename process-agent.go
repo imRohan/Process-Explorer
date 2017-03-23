@@ -17,14 +17,14 @@ import (
 
 var options = struct {
 	autoRefresh          bool
-	showDefaultProcesses bool
+	hideDefaultProcesses bool
 	refreshTime          time.Duration
-}{true, false, 10}
+}{true, true, 10}
 
-var userDetails struct {
+var userDetails = struct {
 	name string
 	mac  string
-}
+}{"default", "default"}
 
 var logger service.Logger
 
@@ -45,7 +45,7 @@ type outputStruct struct {
 }
 
 func getProcesses() (output []Process, err error) {
-	defaultProcesses := options.showDefaultProcesses
+	defaultProcesses := options.hideDefaultProcesses
 
 	processes, err := ps.Processes()
 	if err != nil {
@@ -113,7 +113,7 @@ func initAutoRefresh() {
 			if err != nil {
 				log.Println(err)
 			} else {
-        log.Println("Found: ", len(returnedProcesses), "processes running \r\n")
+        log.Println("Found:", len(returnedProcesses), "running processes \r\n")
 				renderJSON(returnedProcesses)
 			}
 		}
@@ -139,7 +139,7 @@ func (p *program) run() {
 	userDetails.name = name
 	userDetails.mac = mac
 
-	log.Println("Started Service for user - ", userDetails.name, "\r\n")
+	log.Println("Service Started for user - ", userDetails.name, "\r\n")
 	initAutoRefresh()
 }
 
