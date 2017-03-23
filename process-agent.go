@@ -113,7 +113,7 @@ func initAutoRefresh() {
 			if err != nil {
 				log.Println(err)
 			} else {
-        log.Println("Found:", len(returnedProcesses), "running processes \r\n")
+				log.Println("Found:", len(returnedProcesses), "running processes \r\n")
 				renderJSON(returnedProcesses)
 			}
 		}
@@ -139,11 +139,15 @@ func (p *program) run() {
 	userDetails.name = name
 	userDetails.mac = mac
 
-	log.Println("Service Started for user - ", userDetails.name, "\r\n")
+	logString := fmt.Sprintf("Service Started for user '%s' \r\n"+
+		"Options: [Auto Refresh: %v(%v seconds), Show Defaults: %v \r\n",
+		userDetails.name, options.autoRefresh, options.refreshTime, options.hideDefaultProcesses)
+	log.Println(logString)
 	initAutoRefresh()
 }
 
 func (p *program) Stop(s service.Service) error {
+  log.Println("Service Terminated")
 	return nil
 }
 
@@ -180,4 +184,5 @@ func main() {
 	if err != nil {
 		log.Println(err.Error() + "\r\n")
 	}
+  defer processService.Stop()
 }
