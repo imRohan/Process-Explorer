@@ -15,16 +15,18 @@ import (
 	"time"
 )
 
-var autoRefresh bool = true
-var showDefaultProcesses bool = false
-var logger service.Logger
-
-const refreshTime = 10
+var options = struct {
+	autoRefresh          bool
+	showDefaultProcesses bool
+	refreshTime          time.Duration
+}{true, false, 10}
 
 var userDetails struct {
 	name string
 	mac  string
 }
+
+var logger service.Logger
 
 type program struct{}
 
@@ -43,7 +45,7 @@ type outputStruct struct {
 }
 
 func getProcesses() (output []Process, err error) {
-	defaultProcesses := showDefaultProcesses
+	defaultProcesses := options.showDefaultProcesses
 
 	processes, err := ps.Processes()
 	if err != nil {
@@ -105,9 +107,8 @@ func getMacAddress() (macAddress string, err error) {
 }
 
 func initAutoRefresh() {
-	for range time.Tick(time.Second * refreshTime) {
-		status := autoRefresh
-		if status {
+	for range time.Tick(time.Second * options.refreshTime) {
+		if options.autoRefresh {
 			log.Println("Refresh Processes \r\n")
 			returnedProcesses, err := getProcesses()
 			if err != nil {
@@ -125,20 +126,20 @@ func (p *program) Start(s service.Service) error {
 }
 
 func (p *program) run() {
-  name, err := getCurrentUser()
+	name, err := getCurrentUser()
 	if err != nil {
 		log.Println(err)
 	}
 
-  mac, err := getMacAddress()
+	mac, err := getMacAddress()
 	if err != nil {
 		log.Println(err)
 	}
 
-  userDetails.name = name
-  userDetails.mac = mac
+	userDetails.name = name
+	userDetails.mac = mac
 
-  log.Println("Started Service for user - ", userDetails.name, "\r\n")
+	log.Println("Started Service for user - ", userDetails.name, "\r\n")
 	initAutoRefresh()
 }
 
