@@ -22,6 +22,10 @@ _testmain.go
 *.exe
 *.test
 *.prof
+*.exe~
 
 #vim
 *.sw?
+
+#logfile
+logfile
