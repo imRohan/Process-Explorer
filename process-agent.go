@@ -18,6 +18,7 @@ import (
 var autoRefresh bool = true
 var showDefaultProcesses bool = false
 var logger service.Logger
+const refreshTime = 10
 
 type program struct{}
 
@@ -40,7 +41,7 @@ func getProcesses() (output []Process, err error) {
 
 	processes, err := ps.Processes()
 	if err != nil {
-		return output, errors.New("Could Not Get Processes")
+		return output, errors.New("Could Not Get Processes \r\n")
 	}
 
 	for _, process := range processes {
@@ -72,10 +73,10 @@ func renderJSON(returnedProcesses []Process) error {
 
 	json, err := json.Marshal(outputPackage)
 	if err != nil {
-		return errors.New("Cannot Generate JSON")
+		return errors.New("Cannot Generate JSON \r\n")
 	}
 
-	log.Println(string(json))
+	fmt.Println(string(json))
 	return nil
 }
 
@@ -83,7 +84,7 @@ func getCurrentUser() (username string, err error) {
 	user, err := user.Current()
 
 	if err != nil {
-		return username, errors.New("Cannot Get User Details")
+		return username, errors.New("Cannot Get User Details \r\n")
 	}
 
 	username = fmt.Sprintf("%s", user.Username)
@@ -93,7 +94,7 @@ func getCurrentUser() (username string, err error) {
 func getMacAddress() (macAddress string, err error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
-		return macAddress, errors.New("Cannot Get Interfaces")
+		return macAddress, errors.New("Cannot Get Interfaces \r\n")
 	}
 
 	for _, singleInterface := range interfaces {
@@ -107,10 +108,10 @@ func getMacAddress() (macAddress string, err error) {
 }
 
 func initAutoRefresh() {
-	for range time.Tick(time.Second * 10) {
+	for range time.Tick(time.Second * refreshTime) {
 		status := autoRefresh
 		if status {
-			log.Println("Refresh Processes")
+			log.Println("Refresh Processes \r\n")
 			returnedProcesses, err := getProcesses()
 			if err != nil {
 				log.Println(err)
@@ -127,6 +128,7 @@ func (p *program) Start(s service.Service) error {
 }
 
 func (p *program) run() {
+  log.Println("Started Service \r\n")
 	initAutoRefresh()
 }
 
@@ -135,9 +137,9 @@ func (p *program) Stop(s service.Service) error {
 }
 
 func main() {
-	logFile, err := os.OpenFile("activityLog", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	logFile, err := os.OpenFile("LogFile", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf(err.Error())
 	}
 	defer logFile.Close()
 
@@ -152,19 +154,19 @@ func main() {
 	prg := &program{}
 	s, err := service.New(prg, svcConfig)
 	if err != nil {
-		log.Println(err)
+		log.Println(err.Error() + "\r\n")
 	}
 
 	if len(os.Args) > 1 {
 		err = service.Control(s, os.Args[1])
 		if err != nil {
-			log.Println(err)
+			log.Println(err.Error() + "\r\n")
 		}
 		return
 	}
 
 	err = s.Run()
 	if err != nil {
-		log.Println(err)
+		log.Println(err.Error() + "\r\n")
 	}
 }
