@@ -122,8 +122,7 @@ func (p *program) run() {
 		log.Println(err)
 	}
 
-	userDetails.name = name
-	userDetails.mac = mac
+	userDetails.name, userDetails.mac = name, mac
 
 	logString := fmt.Sprintf("Service Started for user '%s' \r\n"+
 		"Options: [Auto Refresh: %v(%v seconds), Show Defaults: %v \r\n",
@@ -144,7 +143,7 @@ func (p *program) run() {
 }
 
 func (p *program) Stop(s service.Service) error {
-  log.Println("Service Terminated")
+	log.Println("Service Terminated")
 	return nil
 }
 
@@ -181,5 +180,4 @@ func main() {
 	if err != nil {
 		log.Println(err.Error() + "\r\n")
 	}
-  defer processService.Stop()
 }
