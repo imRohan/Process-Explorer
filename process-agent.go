@@ -135,7 +135,7 @@ func (p *program) run() {
 			if err != nil {
 				log.Println(err)
 			} else {
-				log.Println("Found:", len(returnedProcesses), "running processes \r\n")
+				log.Println(len(returnedProcesses), "running processes \r\n")
 				renderJSON(returnedProcesses)
 			}
 		}
