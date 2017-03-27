@@ -163,21 +163,34 @@ func main() {
 	}
 
 	prg := &program{}
+
 	processService, err := service.New(prg, svcConfig)
 	if err != nil {
 		log.Println(err.Error() + "\r\n")
-	}
-
-	if len(os.Args) > 1 {
-		err = service.Control(processService, os.Args[1])
-		if err != nil {
-			log.Println(err.Error() + "\r\n")
-		}
 		return
 	}
 
-	err = processService.Run()
-	if err != nil {
-		log.Println(err.Error() + "\r\n")
+	if len(os.Args) > 1 {
+		var err error
+		argument := os.Args[1]
+		switch argument {
+		case "install":
+			err = processService.Install()
+			if err != nil {
+				log.Println("Failed to install: %s \r\n", err)
+				return
+			}
+			log.Println("Service installed \r\n")
+		case "start":
+			err = processService.Run()
+			if err != nil {
+				log.Println("Failed to start service: %s \r\n", err)
+			}
+		case "stop":
+			err = processService.Stop()
+			if err != nil {
+				log.Println("Failed to stop service: %s \r\n", err)
+			}
+		}
 	}
 }
