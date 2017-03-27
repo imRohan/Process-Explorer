@@ -106,29 +106,7 @@ func getMacAddress() (macAddress string, err error) {
 	return macAddress, nil
 }
 
-func (p *program) Start(s service.Service) error {
-	go p.run()
-	return nil
-}
-
-func (p *program) run() {
-	name, err := getCurrentUser()
-	if err != nil {
-		log.Println(err)
-	}
-
-	mac, err := getMacAddress()
-	if err != nil {
-		log.Println(err)
-	}
-
-	userDetails.name, userDetails.mac = name, mac
-
-	logString := fmt.Sprintf("Service Started for user '%s' \r\n"+
-		"Options: [Auto Refresh: %v(%v seconds), Show Defaults: %v \r\n",
-		userDetails.name, options.autoRefresh, options.refreshTime, options.hideDefaultProcesses)
-	log.Println(logString)
-
+func pollProcesses() {
 	for range time.Tick(time.Second * options.refreshTime) {
 		if options.autoRefresh {
 			returnedProcesses, err := getProcesses()
@@ -142,7 +120,32 @@ func (p *program) run() {
 	}
 }
 
+func (p *program) Start(s service.Service) error {
+	options.autoRefresh = true
+
+  name, err := getCurrentUser()
+  if err != nil {
+    return err
+  }
+
+  mac, err := getMacAddress()
+  if err != nil {
+    return err
+  }
+
+	userDetails.name, userDetails.mac = name, mac
+
+	logString := fmt.Sprintf("Service Started for user '%s' \r\n"+
+		"Options: [Auto Refresh: %v(%v seconds), Show Defaults: %v \r\n",
+		userDetails.name, options.autoRefresh, options.refreshTime, options.hideDefaultProcesses)
+	log.Println(logString)
+
+  go pollProcesses()
+  return nil
+}
+
 func (p *program) Stop(s service.Service) error {
+	options.autoRefresh = false
 	log.Println("Service Terminated")
 	return nil
 }
@@ -166,7 +169,7 @@ func main() {
 
 	processService, err := service.New(prg, svcConfig)
 	if err != nil {
-		log.Println(err.Error() + "\r\n")
+		log.Println("Failed to create service: " + err.Error() + "\r\n")
 		return
 	}
 
@@ -177,20 +180,25 @@ func main() {
 		case "install":
 			err = processService.Install()
 			if err != nil {
-				log.Println("Failed to install: %s \r\n", err)
+				log.Printf("Failed to install: " + err.Error() + "\r\n")
 				return
 			}
 			log.Println("Service installed \r\n")
 		case "start":
 			err = processService.Run()
 			if err != nil {
-				log.Println("Failed to start service: %s \r\n", err)
+				log.Println("Failed to start service: " + err.Error() + "\r\n")
 			}
 		case "stop":
 			err = processService.Stop()
 			if err != nil {
-				log.Println("Failed to stop service: %s \r\n", err)
+				log.Println("Failed to stop service: " + err.Error() + "\r\n")
 			}
+		}
+	} else {
+		err = processService.Run()
+		if err != nil {
+			log.Println("Failed to start service: " + err.Error() + "\r\n")
 		}
 	}
 }
