@@ -136,7 +136,7 @@ func (p *program) Start(s service.Service) error {
 	userDetails.name, userDetails.mac = name, mac
 
 	logString := fmt.Sprintf("Service Started for user '%s' \r\n"+
-		"Options: [Auto Refresh: %v(%v seconds), Show Defaults: %v \r\n",
+		"Options: [Auto Refresh: %v(%v seconds), Hide Defaults: %v] \r\n",
 		userDetails.name, options.autoRefresh, options.refreshTime, options.hideDefaultProcesses)
 	log.Println(logString)
 
@@ -151,7 +151,7 @@ func (p *program) Stop(s service.Service) error {
 }
 
 func main() {
-	logFile, err := os.OpenFile("LogFile", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	logFile, err := os.OpenFile("BioconnectProcess.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
