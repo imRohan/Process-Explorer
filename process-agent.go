@@ -21,14 +21,14 @@ var options = struct {
 	refreshTime          time.Duration
 }{true, true, 10}
 
-var userDetails = struct {
-	name string
-	mac  string
-}{"default", "default"}
-
 var logger service.Logger
 
 type program struct{}
+
+type UserDetails struct {
+	Name string `json:"userName"`
+	Mac  string `json:"macAddress"`
+}
 
 type Process struct {
 	Name      string    `json:"name"`
@@ -39,9 +39,8 @@ type Process struct {
 }
 
 type outputStruct struct {
-	User       string    `json:"user"`
-	MacAddress string    `json:"Mac Address"`
-	Processes  []Process `json:"processes"`
+	UserDetails UserDetails `json:"UserDetails"`
+	Processes   []Process   `json:"processes"`
 }
 
 func getProcesses() (output []Process, err error) {
@@ -67,15 +66,15 @@ func getProcesses() (output []Process, err error) {
 	return output, nil
 }
 
-func renderJSON(returnedProcesses []Process) error {
-	outputPackage := outputStruct{userDetails.name, userDetails.mac, returnedProcesses}
+func renderJSON(user UserDetails, returnedProcesses []Process) error {
+	outputPackage := outputStruct{user, returnedProcesses}
 
 	json, err := json.Marshal(outputPackage)
 	if err != nil {
 		return errors.New("Cannot Generate JSON \r\n")
 	}
 
-	fmt.Println(string(json))
+	log.Println(string(json))
 	return nil
 }
 
@@ -106,7 +105,7 @@ func getMacAddress() (macAddress string, err error) {
 	return macAddress, nil
 }
 
-func pollProcesses() {
+func pollProcesses(user UserDetails) {
 	for range time.Tick(time.Second * options.refreshTime) {
 		if options.autoRefresh {
 			returnedProcesses, err := getProcesses()
@@ -114,7 +113,7 @@ func pollProcesses() {
 				log.Println(err)
 			} else {
 				log.Println(len(returnedProcesses), "running processes \r\n")
-				renderJSON(returnedProcesses)
+				renderJSON(user, returnedProcesses)
 			}
 		}
 	}
@@ -123,25 +122,25 @@ func pollProcesses() {
 func (p *program) Start(s service.Service) error {
 	options.autoRefresh = true
 
-  name, err := getCurrentUser()
-  if err != nil {
-    return err
-  }
+	name, err := getCurrentUser()
+	if err != nil {
+		return err
+	}
 
-  mac, err := getMacAddress()
-  if err != nil {
-    return err
-  }
+	mac, err := getMacAddress()
+	if err != nil {
+		return err
+	}
 
-	userDetails.name, userDetails.mac = name, mac
+  user := UserDetails{name, mac}
 
 	logString := fmt.Sprintf("Service Started for user '%s' \r\n"+
 		"Options: [Auto Refresh: %v(%v seconds), Hide Defaults: %v] \r\n",
-		userDetails.name, options.autoRefresh, options.refreshTime, options.hideDefaultProcesses)
+		user.Name, options.autoRefresh, options.refreshTime, options.hideDefaultProcesses)
 	log.Println(logString)
 
-  go pollProcesses()
-  return nil
+	go pollProcesses(user)
+	return nil
 }
 
 func (p *program) Stop(s service.Service) error {
