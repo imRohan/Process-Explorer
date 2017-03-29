@@ -15,21 +15,20 @@ import (
 	"time"
 )
 
+// Build options, refresh time is in seconds
 var options = struct {
 	autoRefresh          bool
 	hideDefaultProcesses bool
 	refreshTime          time.Duration
 }{true, true, 10}
 
-var logger service.Logger
-
-type program struct{}
-
+// Struct to hold User Details
 type UserDetails struct {
 	Name string `json:"userName"`
 	Mac  string `json:"macAddress"`
 }
 
+// Struct to hold process information
 type Process struct {
 	Name      string    `json:"name"`
 	CreatedAt string    `json:"createdAt"`
@@ -38,11 +37,18 @@ type Process struct {
 	Uuid      uuid.UUID `json:"uuid"`
 }
 
+// Struct which is converted to final JSON
 type outputStruct struct {
 	UserDetails UserDetails `json:"UserDetails"`
 	Processes   []Process   `json:"processes"`
 }
 
+type program struct{}
+
+/* getProcesses
+   Gets all running processes and returns an array of 
+   Process objects 
+*/
 func getProcesses() (output []Process, err error) {
 	defaultProcesses := options.hideDefaultProcesses
 
@@ -66,6 +72,10 @@ func getProcesses() (output []Process, err error) {
 	return output, nil
 }
 
+/* renderJSON
+   Requires a UserDetails object as well as an array of Processes
+   will return valid JSON of all running processes
+*/
 func renderJSON(user UserDetails, returnedProcesses []Process) error {
 	outputPackage := outputStruct{user, returnedProcesses}
 
@@ -78,6 +88,12 @@ func renderJSON(user UserDetails, returnedProcesses []Process) error {
 	return nil
 }
 
+/* getCurrentUser
+   Get the username of the current user.
+   Note: If run as a service, the current user will always be NT AUTHORITY\SYSTEM.
+         However, if run as a standalone application, this will return the
+         current logged in user
+*/
 func getCurrentUser() (username string, err error) {
 	user, err := user.Current()
 
@@ -89,6 +105,10 @@ func getCurrentUser() (username string, err error) {
 	return username, nil
 }
 
+/* getMacAddress
+   Returns the mac accress of the machine, assuming the hardware name is a variant of
+   ethernet.
+*/
 func getMacAddress() (macAddress string, err error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
@@ -105,6 +125,10 @@ func getMacAddress() (macAddress string, err error) {
 	return macAddress, nil
 }
 
+/* pollProcesses
+   Continually gets a list of process at a fixed duration (see global vars above)
+   and forwards the returned list of processes to a callback
+*/
 func pollProcesses(user UserDetails) {
 	for range time.Tick(time.Second * options.refreshTime) {
 		if options.autoRefresh {
@@ -119,6 +143,9 @@ func pollProcesses(user UserDetails) {
 	}
 }
 
+/* Start
+   Grabs the current user details and initializes pollProcesses
+*/
 func (p *program) Start(s service.Service) error {
 	options.autoRefresh = true
 
@@ -143,12 +170,18 @@ func (p *program) Start(s service.Service) error {
 	return nil
 }
 
+/* Stop
+   Sets the auto refresh flag to false and terminates the application
+*/
 func (p *program) Stop(s service.Service) error {
 	options.autoRefresh = false
 	log.Println("Service Terminated")
 	return nil
 }
 
+/* main
+   Initializes the log & service and waits for arguments. If no args present, call Run()
+*/
 func main() {
 	logFile, err := os.OpenFile("BioconnectProcess.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
