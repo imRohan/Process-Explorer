@@ -33,7 +33,7 @@ func TestGetMACAddr(t *testing.T) {
 func TestJSONOutput(t *testing.T) {
 	output,_ := getProcesses()
 
-  err := renderJSON(test_user, output)
+	err := renderJSON(RenderParams{test_user, output, exportData})
 	if err != nil {
 		t.Error("Could Not Render JSON")
 	}

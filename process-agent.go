@@ -37,17 +37,36 @@ type Process struct {
 	Uuid      uuid.UUID `json:"uuid"`
 }
 
-// Struct which is converted to final JSON
-type outputStruct struct {
-	UserDetails UserDetails `json:"UserDetails"`
-	Processes   []Process   `json:"processes"`
+// Struct for renderJson params
+type RenderParams struct {
+	UserDetails UserDetails
+	Processes   []Process
+	Callback    func([]byte)
 }
 
 type program struct{}
 
+/* pollProcesses
+   Continually gets a list of process at a fixed duration (see global vars above)
+   and forwards the returned list of processes to a callback
+*/
+func pollProcesses(user UserDetails) {
+	for range time.Tick(time.Second * options.refreshTime) {
+		if options.autoRefresh {
+			returnedProcesses, err := getProcesses()
+			if err != nil {
+				log.Println(err)
+			} else {
+				log.Println(len(returnedProcesses), "running processes \r\n")
+				renderJSON(RenderParams{user, returnedProcesses, exportData})
+			}
+		}
+	}
+}
+
 /* getProcesses
-   Gets all running processes and returns an array of 
-   Process objects 
+   Gets all running processes and returns an array of
+   Process objects
 */
 func getProcesses() (output []Process, err error) {
 	defaultProcesses := options.hideDefaultProcesses
@@ -76,16 +95,28 @@ func getProcesses() (output []Process, err error) {
    Requires a UserDetails object as well as an array of Processes
    will return valid JSON of all running processes
 */
-func renderJSON(user UserDetails, returnedProcesses []Process) error {
-	outputPackage := outputStruct{user, returnedProcesses}
+func renderJSON(params RenderParams) error {
+  // Struct which is holds the final JSON
+  var outputPackage = struct {
+    UserDetails UserDetails `json:"userDetails"`
+    Processes   []Process   `json:"processes"`
+  }{params.UserDetails, params.Processes}
 
 	json, err := json.Marshal(outputPackage)
 	if err != nil {
 		return errors.New("Cannot Generate JSON \r\n")
 	}
 
-	log.Println(string(json))
+	go params.Callback(json)
 	return nil
+}
+
+/* exportData
+   Placeholder for what to do with the built json...POST?
+*/
+func exportData(json []byte) {
+  jsonString := string(json)
+  log.Println("\r\n Returned JSON: " + jsonString + "\r\n")
 }
 
 /* getCurrentUser
@@ -125,23 +156,6 @@ func getMacAddress() (macAddress string, err error) {
 	return macAddress, nil
 }
 
-/* pollProcesses
-   Continually gets a list of process at a fixed duration (see global vars above)
-   and forwards the returned list of processes to a callback
-*/
-func pollProcesses(user UserDetails) {
-	for range time.Tick(time.Second * options.refreshTime) {
-		if options.autoRefresh {
-			returnedProcesses, err := getProcesses()
-			if err != nil {
-				log.Println(err)
-			} else {
-				log.Println(len(returnedProcesses), "running processes \r\n")
-				renderJSON(user, returnedProcesses)
-			}
-		}
-	}
-}
 
 /* Start
    Grabs the current user details and initializes pollProcesses
@@ -159,7 +173,7 @@ func (p *program) Start(s service.Service) error {
 		return err
 	}
 
-  user := UserDetails{name, mac}
+	user := UserDetails{name, mac}
 
 	logString := fmt.Sprintf("Service Started for user '%s' \r\n"+
 		"Options: [Auto Refresh: %v(%v seconds), Hide Defaults: %v] \r\n",
